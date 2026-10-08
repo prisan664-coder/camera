@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pro Camera Web App</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body,
+        html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff;
+        }
+
+        .app-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* ช่องมองภาพเต็มจอ */
+        .viewfinder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(1);
+            transition: transform 0.1s ease;
+        }
+
+        video.front-camera {
+            transform: scaleX(-1);
+        }
+
+        /* แถบด้านบน */
+        .top-bar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent);
+        }
+
+        .top-icons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .top-btn {
+            background: rgba(0, 0, 0, 0.4);
+            border: none;
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+
+        .top-btn.active {
+            color: #f1c40f;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* เมนูตั้งเวลา */
+        .popup-menu {
+            position: absolute;
+            top: 75px;
+            left: 20px;
+            background: rgba(20, 20, 20, 0.9);
+            backdrop-filter: blur(15px);
+            border-radius: 12px;
+            padding: 8px;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 25;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 140px;
+        }
+
+        .popup-menu.show {
+            display: flex;
+        }
+
+        .menu-option {
+            background: none;
+            border: none;
+            color: #fff;
+            padding: 10px 15px;
+            text-align: left;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+
+        .menu-option:hover,
+        .menu-option.active {
+            background: rgba(241, 196, 15, 0.2);
+            color: #f1c40f;
+            font-weight: bold;
+        }
+
+        /* เมนูฟิลเตอร์ (ซ่อนไว้ ไปโผล่เมื่อกดปุ่มฟิลเตอร์) */
+        .filter-popup {
+            position: absolute;
+            top: 75px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.9);
+            backdrop-filter: blur(15px);
+            border-radius: 12px;
+            padding: 8px;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 25;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 150px;
+        }
+
+        .filter-popup.show {
+            display: flex;
+        }
+
+        /* ตัวนับถอยหลังกลางจอ */
+        .countdown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 30;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 100px;
+            font-weight: bold;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.4);
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        /* แถบควบคุมด้านล่าง */
+        .bottom-control-panel {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+            padding-bottom: 20px;
+        }
+
+        /* ซูมสไลเดอร์ */
+        .zoom-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding: 10px 0;
+        }
+
+        .zoom-btn {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 140px;
+            background: rgba(255, 255, 255, 0.3);
+            height: 4px;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #f1c40f;
+            cursor: pointer;
+        }
+
+        /* โหมดถ่ายภาพ */
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            padding: 10px 0;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .mode-item {
+            cursor: pointer;
+            transition: 0.2s;
+            padding: 4px 2px;
+        }
+
+        .mode-item.active {
+            color: #f1c40f;
+            font-weight: bold;
+            border-bottom: 2px solid #f1c40f;
+        }
+
+        /* ปุ่มชัตเตอร์และแกลเลอรี */
+        .action-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px 20px;
+        }
+
+        .gallery-preview {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            border: 2px solid #fff;
+            overflow: hidden;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .gallery-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .shutter-btn {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            border: 4px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .shutter-inner {
+            width: 63px;
+            height: 63px;
+            border-radius: 50%;
+            background: #fff;
+            transition: 0.1s;
+        }
+
+        .shutter-btn:active .shutter-inner {
+            background: #ccc;
+            transform: scale(0.9);
+        }
+
+        .switch-camera-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5);
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* สถานะบันทึกวิดีโอ */
+        .recording-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 0, 0, 0.8);
+            padding: 5px 12px;
+            border-radius: 20px;
+            z-index: 20;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .rec-dot {
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.2;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* ฟิลเตอร์แต่งภาพสีต่างๆ */
+        .f-normal {
+            filter: none;
+        }
+
+        .f-mono {
+            filter: grayscale(100%);
+        }
+
+        .f-vintage {
+            filter: sepia(60%) contrast(110%) brightness(90%);
+        }
+
+        .f-warm {
+            filter: sepia(30%) saturate(140%) hue-rotate(-10deg);
+        }
+
+        .f-cool {
+            filter: saturate(120%) hue-rotate(180deg) brightness(95%);
+        }
+
+        .f-pastel {
+            filter: saturate(80%) brightness(110%) contrast(90%);
+        }
+
+        .f-portrait {
+            filter: contrast(105%) brightness(105%) saturate(110%) drop-shadow(0 0 2px rgba(255, 182, 193, 0.5));
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <!-- ช่องมองภาพ -->
+        <div class="viewfinder">
+            <video id="camera-stream" autoplay playsinline muted class="f-normal"></video>
+        </div>
+
+        <div id="countdown" class="countdown-overlay"></div>
+        <div id="rec-status" class="recording-indicator">
+            <div class="rec-dot"></div><span>REC</span>
+        </div>
+
+        <!-- แถบด้านบน -->
+        <div class="top-bar">
+            <button class="top-btn" id="timer-btn" title="ตั้งเวลา">⏱️</button>
+            <div class="top-icons">
+                <button class="top-btn" id="filter-menu-btn" title="ฟิลเตอร์">🎨</button>
+                <button class="top-btn" id="flash-btn" title="แฟลช">⚡</button>
+            </div>
+        </div>
+
+        <!-- เมนูตั้งเวลา -->
+        <div id="timer-menu" class="popup-menu">
+            <button class="menu-option active" data-time="0">ปิดตั้งเวลา</button>
+            <button class="menu-option" data-time="5">5 วินาที</button>
+            <button class="menu-option" data-time="10">10 วินาที</button>
+            <button class="menu-option" data-time="20">20 วินาที</button>
+        </div>
+
+        <!-- เมนูฟิลเตอร์ (ซ่อนอยู่ที่มุมขวาบน) -->
+        <div id="filter-popup" class="filter-popup">
+            <button class="menu-option active" data-filter="f-normal">✨ ปกติ</button>
+            <button class="menu-option" data-filter="f-mono">🖤 ขาวดำ</button>
+            <button class="menu-option" data-filter="f-vintage">🎞️ วินเทจ</button>
+            <button class="menu-option" data-filter="f-warm">🌅 โทนอุ่น</button>
+            <button class="menu-option" data-filter="f-cool">🧊 โทนเย็น</button>
+            <button class="menu-option" data-filter="f-pastel">🌸 พาสเทล</button>
+            <button class="menu-option" data-filter="f-portrait">👤 บุคคลวิบวับ</button>
+        </div>
+
+        <!-- แถบควบคุมด้านล่าง -->
+        <div class="bottom-control-panel">
+            <!-- ซูม -->
+            <div class="zoom-container">
+                <button class="zoom-btn" id="zoom-out">-</button>
+                <input type="range" id="zoom-slider" min="1" max="4" step="0.1" value="1">
+                <button class="zoom-btn" id="zoom-in">+</button>
+            </div>
+
+            <!-- โหมดกล้อง -->
+            <div class="mode-selector">
+                <div class="mode-item active" data-mode="photo">ภาพนิ่ง</div>
+                <div class="mode-item" data-mode="video">วิดีโอ</div>
+                <div class="mode-item" data-mode="slowmo">สโลโมชั่น</div>
+                <div class="mode-item" data-mode="portrait">ภาพบุคคล</div>
+            </div>
+
+            <!-- ปุ่มชัตเตอร์ & แกลเลอรี -->
+            <div class="action-row">
+                <div class="gallery-preview" id="gallery-preview" title="รูปล่าสุด">
+                    <span style="font-size: 10px; color: #aaa;">อัลบั้ม</span>
+                </div>
+
+                <button class="shutter-btn" id="shutter-btn">
+                    <div class="shutter-inner" id="shutter-inner"></div>
+                </button>
+
+                <button class="switch-camera-btn" id="switch-camera">🔄</button>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="hidden-canvas" style="display:none;"></canvas>
+
+    <script>
+        const video = document.getElementById('camera-stream');
+        const canvas = document.getElementById('hidden-canvas');
+        const shutterBtn = document.getElementById('shutter-btn');
+        const shutterInner = document.getElementById('shutter-inner');
+        const switchCameraBtn = document.getElementById('switch-camera');
+        const zoomSlider = document.getElementById('zoom-slider');
+        const zoomInBtn = document.getElementById('zoom-in');
+        const zoomOutBtn = document.getElementById('zoom-out');
+        const timerBtn = document.getElementById('timer-btn');
+        const timerMenu = document.getElementById('timer-menu');
+        const filterMenuBtn = document.getElementById('filter-menu-btn');
+        const filterPopup = document.getElementById('filter-popup');
+        const countdownEl = document.getElementById('countdown');
+        const recStatus = document.getElementById('rec-status');
+        const galleryPreview = document.getElementById('gallery-preview');
+
+        let currentFacingMode = 'environment';
+        let currentMode = 'photo';
+        let currentFilter = 'f-normal';
+        let timerSeconds = 0;
+        let isRecording = false;
+        let mediaRecorder;
+        let recordedChunks = [];
+        let streamObj = null;
+
+        async function startCamera() {
+            try {
+                if (streamObj) {
+                    streamObj.getTracks().forEach(track => track.stop());
+                }
+                const constraints = {
+                    video: {facingMode: currentFacingMode, width: {ideal: 1920}, height: {ideal: 1080}},
+                    audio: currentMode === 'video' || currentMode === 'slowmo'
+                };
+                streamObj = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = streamObj;
+
+                if (currentFacingMode === 'user') {
+                    video.classList.add('front-camera');
+                } else {
+                    video.classList.remove('front-camera');
+                }
+            } catch (err) {
+                alert('ไม่สามารถเข้าถึงกล้องได้: ' + err.message);
+            }
+        }
+
+        startCamera();
+
+        switchCameraBtn.addEventListener('click', () => {
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            startCamera();
+        });
+
+        // สลับโหมดถ่ายภาพ
+        document.querySelectorAll('.mode-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                document.querySelectorAll('.mode-item').forEach(m => m.classList.remove('active'));
+                e.target.classList.add('active');
+                currentMode = e.target.getAttribute('data-mode');
+
+                if (currentMode === 'video' || currentMode === 'slowmo') {
+                    shutterInner.style.backgroundColor = '#e74c3c';
+                } else {
+                    shutterInner.style.backgroundColor = '#fff';
+                }
+            });
+        });
+
+        // เปิด/ปิด เมนูตั้งเวลา
+        timerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            timerMenu.classList.toggle('show');
+            filterPopup.classList.remove('show');
+        });
+
+        document.querySelectorAll('#timer-menu .menu-option').forEach(opt => {
+            opt.addEventListener('click', (e) => {
+                document.querySelectorAll('#timer-menu .menu-option').forEach(o => o.classList.remove('active'));
+                e.target.classList.add('active');
+                timerSeconds = parseInt(e.target.getAttribute('data-time'));
+                timerBtn.classList.toggle('active', timerSeconds > 0);
+                timerMenu.classList.remove('show');
+            });
+        });
+
+        // เปิด/ปิด เมนูฟิลเตอร์
+        filterMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            filterPopup.classList.toggle('show');
+            timerMenu.classList.remove('show');
+        });
+
+        // เลือกฟิลเตอร์
+        document.querySelectorAll('#filter-popup .menu-option').forEach(opt => {
+            opt.addEventListener('click', (e) => {
+                document.querySelectorAll('#filter-popup .menu-option').forEach(o => o.classList.remove('active'));
+                e.target.classList.add('active');
+
+                video.className = '';
+                currentFilter = e.target.getAttribute('data-filter');
+                video.classList.add(currentFilter);
+                if (currentFacingMode === 'user') video.classList.add('front-camera');
+
+                filterPopup.classList.remove('show');
+                filterMenuBtn.classList.add('active');
+            });
+        });
+
+        // คลิกพื้นที่อื่นเพื่อปิดเมนู
+        window.addEventListener('click', () => {
+            timerMenu.classList.remove('show');
+            filterPopup.classList.remove('show');
+        });
+
+        // ซูมภาพ
+        zoomSlider.addEventListener('input', (e) => {
+            video.style.transform = `scale(${e.target.value}) ${currentFacingMode === 'user' ? 'scaleX(-1)' : ''}`;
+        });
+        zoomInBtn.addEventListener('click', () => {
+            let val = Math.min(4, parseFloat(zoomSlider.value) + 0.2);
+            zoomSlider.value = val;
+            zoomSlider.dispatchEvent(new Event('input'));
+        });
+        zoomOutBtn.addEventListener('click', () => {
+            let val = Math.max(1, parseFloat(zoomSlider.value) - 0.2);
+            zoomSlider.value = val;
+            zoomSlider.dispatchEvent(new Event('input'));
+        });
+
+        // กดชัตเตอร์
+        shutterBtn.addEventListener('click', () => {
+            if (timerSeconds > 0) {
+                startCountdown(timerSeconds, executeCaptureAction);
+            } else {
+                executeCaptureAction();
+            }
+        });
+
+        function startCountdown(seconds, callback) {
+            let count = seconds;
+            countdownEl.style.display = 'flex';
+            countdownEl.textContent = count;
+
+            let interval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownEl.textContent = count;
+                } else {
+                    clearInterval(interval);
+                    countdownEl.style.display = 'none';
+                    callback();
+                }
+            }, 1000);
+        }
+
+        function executeCaptureAction() {
+            if (currentMode === 'photo' || currentMode === 'portrait') {
+                takeSnapshot();
+            } else {
+                toggleVideoRecording();
+            }
+        }
+
+        function takeSnapshot() {
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            const ctx = canvas.getContext('2d');
+
+            if (currentFacingMode === 'user') {
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+            }
+
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageURL = canvas.toDataURL('image/jpeg', 0.95);
+
+            galleryPreview.innerHTML = `<img src="${imageURL}">`;
+
+            const link = document.createElement('a');
+            link.href = imageURL;
+            link.download = `photo_${Date.now()}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function toggleVideoRecording() {
+            if (!isRecording) {
+                recordedChunks = [];
+                try {
+                    mediaRecorder = new MediaRecorder(streamObj, {mimeType: 'video/webm'});
+                } catch (e) {
+                    mediaRecorder = new MediaRecorder(streamObj);
+                }
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) recordedChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, {type: 'video/webm'});
+                    const videoURL = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = videoURL;
+                    link.download = `${currentMode === 'slowmo' ? 'slowmo' : 'video'}_${Date.now()}.webm`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                recStatus.style.display = 'flex';
+                shutterInner.style.borderRadius = '4px';
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                recStatus.style.display = 'none';
+                shutterInner.style.borderRadius = '50%';
+            }
+        }
+    </script>
+</body>
+
+</html>
