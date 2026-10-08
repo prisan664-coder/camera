@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Camera Web App</title>
+    <title>Pro Camera & Gallery Web App</title>
     <style>
         * {
             box-sizing: border-box;
@@ -32,7 +32,6 @@
             justify-content: space-between;
         }
 
-        /* ช่องมองภาพเต็มจอ */
         .viewfinder {
             position: absolute;
             top: 0;
@@ -59,7 +58,6 @@
             transform: scaleX(-1);
         }
 
-        /* แถบด้านบน */
         .top-bar {
             position: relative;
             z-index: 10;
@@ -95,7 +93,6 @@
             background: rgba(255, 255, 255, 0.2);
         }
 
-        /* เมนูตั้งเวลา */
         .popup-menu {
             position: absolute;
             top: 75px;
@@ -135,7 +132,6 @@
             font-weight: bold;
         }
 
-        /* เมนูฟิลเตอร์ (ซ่อนไว้ ไปโผล่เมื่อกดปุ่มฟิลเตอร์) */
         .filter-popup {
             position: absolute;
             top: 75px;
@@ -156,7 +152,6 @@
             display: flex;
         }
 
-        /* ตัวนับถอยหลังกลางจอ */
         .countdown-overlay {
             position: absolute;
             top: 0;
@@ -174,7 +169,6 @@
             text-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
         }
 
-        /* แถบควบคุมด้านล่าง */
         .bottom-control-panel {
             position: relative;
             z-index: 10;
@@ -184,7 +178,6 @@
             padding-bottom: 20px;
         }
 
-        /* ซูมสไลเดอร์ */
         .zoom-container {
             display: flex;
             justify-content: center;
@@ -222,7 +215,6 @@
             cursor: pointer;
         }
 
-        /* โหมดถ่ายภาพ */
         .mode-selector {
             display: flex;
             justify-content: center;
@@ -244,7 +236,6 @@
             border-bottom: 2px solid #f1c40f;
         }
 
-        /* ปุ่มชัตเตอร์และแกลเลอรี */
         .action-row {
             display: flex;
             justify-content: space-around;
@@ -311,7 +302,6 @@
             cursor: pointer;
         }
 
-        /* สถานะบันทึกวิดีโอ */
         .recording-indicator {
             position: absolute;
             top: 20px;
@@ -349,7 +339,108 @@
             }
         }
 
-        /* ฟิลเตอร์แต่งภาพสีต่างๆ */
+        /* หน้าต่างคลังรูปภาพ (Gallery Modal) */
+        .gallery-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .gallery-modal.show {
+            display: flex;
+        }
+
+        .gallery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .close-gallery {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            overflow-y: auto;
+            flex-grow: 1;
+            padding-bottom: 20px;
+        }
+
+        .gallery-item {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #222;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* หน้าต่างดูรูปเดี่ยว (Lightbox) */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.98);
+            z-index: 150;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .lightbox.show {
+            display: flex;
+        }
+
+        .lightbox img {
+            max-width: 100%;
+            max-height: 75vh;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .lightbox-actions {
+            display: flex;
+            gap: 20px;
+        }
+
+        .lightbox-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
         .f-normal {
             filter: none;
         }
@@ -383,7 +474,6 @@
 <body>
 
     <div class="app-container">
-        <!-- ช่องมองภาพ -->
         <div class="viewfinder">
             <video id="camera-stream" autoplay playsinline muted class="f-normal"></video>
         </div>
@@ -393,7 +483,6 @@
             <div class="rec-dot"></div><span>REC</span>
         </div>
 
-        <!-- แถบด้านบน -->
         <div class="top-bar">
             <button class="top-btn" id="timer-btn" title="ตั้งเวลา">⏱️</button>
             <div class="top-icons">
@@ -402,7 +491,6 @@
             </div>
         </div>
 
-        <!-- เมนูตั้งเวลา -->
         <div id="timer-menu" class="popup-menu">
             <button class="menu-option active" data-time="0">ปิดตั้งเวลา</button>
             <button class="menu-option" data-time="5">5 วินาที</button>
@@ -410,7 +498,6 @@
             <button class="menu-option" data-time="20">20 วินาที</button>
         </div>
 
-        <!-- เมนูฟิลเตอร์ (ซ่อนอยู่ที่มุมขวาบน) -->
         <div id="filter-popup" class="filter-popup">
             <button class="menu-option active" data-filter="f-normal">✨ ปกติ</button>
             <button class="menu-option" data-filter="f-mono">🖤 ขาวดำ</button>
@@ -421,16 +508,13 @@
             <button class="menu-option" data-filter="f-portrait">👤 บุคคลวิบวับ</button>
         </div>
 
-        <!-- แถบควบคุมด้านล่าง -->
         <div class="bottom-control-panel">
-            <!-- ซูม -->
             <div class="zoom-container">
                 <button class="zoom-btn" id="zoom-out">-</button>
                 <input type="range" id="zoom-slider" min="1" max="4" step="0.1" value="1">
                 <button class="zoom-btn" id="zoom-in">+</button>
             </div>
 
-            <!-- โหมดกล้อง -->
             <div class="mode-selector">
                 <div class="mode-item active" data-mode="photo">ภาพนิ่ง</div>
                 <div class="mode-item" data-mode="video">วิดีโอ</div>
@@ -438,9 +522,8 @@
                 <div class="mode-item" data-mode="portrait">ภาพบุคคล</div>
             </div>
 
-            <!-- ปุ่มชัตเตอร์ & แกลเลอรี -->
             <div class="action-row">
-                <div class="gallery-preview" id="gallery-preview" title="รูปล่าสุด">
+                <div class="gallery-preview" id="gallery-preview" title="คลังรูปภาพ">
                     <span style="font-size: 10px; color: #aaa;">อัลบั้ม</span>
                 </div>
 
@@ -450,6 +533,27 @@
 
                 <button class="switch-camera-btn" id="switch-camera">🔄</button>
             </div>
+        </div>
+    </div>
+
+    <!-- คลังรูปภาพในแอป (Gallery Modal) -->
+    <div id="gallery-modal" class="gallery-modal">
+        <div class="gallery-header">
+            <span>คลังรูปภาพของฉัน</span>
+            <button class="close-gallery" id="close-gallery">✕</button>
+        </div>
+        <div class="gallery-grid" id="gallery-grid">
+            <!-- รายการรูปจะถูกเพิ่มเข้ามาตรงนี้อัตโนมัติ -->
+        </div>
+    </div>
+
+    <!-- หน้าต่างดูภาพเดี่ยว / จัดการภาพ -->
+    <div id="lightbox" class="lightbox">
+        <img id="lightbox-img" src="" alt="Expanded Photo">
+        <div class="lightbox-actions">
+            <button class="lightbox-btn" id="lightbox-download">ดาวน์โหลดซ้ำ</button>
+            <button class="lightbox-btn" id="lightbox-delete" style="background: rgba(231,76,60,0.6);">ลบภาพ</button>
+            <button class="lightbox-btn" id="lightbox-close">ปิด</button>
         </div>
     </div>
 
@@ -472,6 +576,15 @@
         const recStatus = document.getElementById('rec-status');
         const galleryPreview = document.getElementById('gallery-preview');
 
+        const galleryModal = document.getElementById('gallery-modal');
+        const closeGalleryBtn = document.getElementById('close-gallery');
+        const galleryGrid = document.getElementById('gallery-grid');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const lightboxDownload = document.getElementById('lightbox-download');
+        const lightboxDelete = document.getElementById('lightbox-delete');
+        const lightboxClose = document.getElementById('lightbox-close');
+
         let currentFacingMode = 'environment';
         let currentMode = 'photo';
         let currentFilter = 'f-normal';
@@ -480,6 +593,12 @@
         let mediaRecorder;
         let recordedChunks = [];
         let streamObj = null;
+
+        // เก็บรายการรูปภาพในความจำเครื่อง (LocalStorage)
+        let localGallery = JSON.parse(localStorage.getItem('my_camera_gallery') || '[]');
+        let activePhotoIndex = null;
+
+        updateGalleryThumbnail();
 
         async function startCamera() {
             try {
@@ -510,7 +629,6 @@
             startCamera();
         });
 
-        // สลับโหมดถ่ายภาพ
         document.querySelectorAll('.mode-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 document.querySelectorAll('.mode-item').forEach(m => m.classList.remove('active'));
@@ -525,7 +643,6 @@
             });
         });
 
-        // เปิด/ปิด เมนูตั้งเวลา
         timerBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             timerMenu.classList.toggle('show');
@@ -542,14 +659,12 @@
             });
         });
 
-        // เปิด/ปิด เมนูฟิลเตอร์
         filterMenuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             filterPopup.classList.toggle('show');
             timerMenu.classList.remove('show');
         });
 
-        // เลือกฟิลเตอร์
         document.querySelectorAll('#filter-popup .menu-option').forEach(opt => {
             opt.addEventListener('click', (e) => {
                 document.querySelectorAll('#filter-popup .menu-option').forEach(o => o.classList.remove('active'));
@@ -565,13 +680,11 @@
             });
         });
 
-        // คลิกพื้นที่อื่นเพื่อปิดเมนู
         window.addEventListener('click', () => {
             timerMenu.classList.remove('show');
             filterPopup.classList.remove('show');
         });
 
-        // ซูมภาพ
         zoomSlider.addEventListener('input', (e) => {
             video.style.transform = `scale(${e.target.value}) ${currentFacingMode === 'user' ? 'scaleX(-1)' : ''}`;
         });
@@ -586,7 +699,6 @@
             zoomSlider.dispatchEvent(new Event('input'));
         });
 
-        // กดชัตเตอร์
         shutterBtn.addEventListener('click', () => {
             if (timerSeconds > 0) {
                 startCountdown(timerSeconds, executeCaptureAction);
@@ -620,6 +732,7 @@
             }
         }
 
+        // ถ่ายภาพ บันทึกลงคลังในแอป และเซฟเข้าเครื่อง
         function takeSnapshot() {
             canvas.width = video.videoWidth || 1280;
             canvas.height = video.videoHeight || 720;
@@ -631,17 +744,99 @@
             }
 
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageURL = canvas.toDataURL('image/jpeg', 0.95);
+            const imageURL = canvas.toDataURL('image/jpeg', 0.90);
 
-            galleryPreview.innerHTML = `<img src="${imageURL}">`;
+            // เพิ่มรูปลงในคลังรูปภาพและความจำเครื่อง
+            localGallery.unshift(imageURL);
+            try {
+                localStorage.setItem('my_camera_gallery', JSON.stringify(localGallery));
+            } catch (e) {
+                console.log('Storage is full or restricted');
+            }
 
-            const link = document.createElement('a');
-            link.href = imageURL;
-            link.download = `photo_${Date.now()}.jpg`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            updateGalleryThumbnail();
+
+            // ดาวน์โหลดลงแอปรูปภาพของเครื่องอัตโนมัติ
+            canvas.toBlob(async (blob) => {
+                if (!blob) return;
+                const file = new File([blob], `photo_${Date.now()}.jpg`, {type: 'image/jpeg'});
+
+                if (navigator.canShare && navigator.canShare({files: [file]})) {
+                    try {
+                        await navigator.share({files: [file], title: 'รูปถ่ายจากกล้อง'});
+                        return;
+                    } catch (err) { }
+                }
+
+                const link = document.createElement('a');
+                link.href = imageURL;
+                link.download = `photo_${Date.now()}.jpg`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }, 'image/jpeg', 0.95);
         }
+
+        function updateGalleryThumbnail() {
+            if (localGallery.length > 0) {
+                galleryPreview.innerHTML = `<img src="${localGallery[0]}">`;
+            } else {
+                galleryPreview.innerHTML = `<span style="font-size: 10px; color: #aaa;">อัลบั้ม</span>`;
+            }
+        }
+
+        // เปิดคลังรูปภาพ
+        galleryPreview.addEventListener('click', () => {
+            renderGalleryGrid();
+            galleryModal.classList.add('show');
+        });
+
+        closeGalleryBtn.addEventListener('click', () => {
+            galleryModal.classList.remove('show');
+        });
+
+        function renderGalleryGrid() {
+            galleryGrid.innerHTML = '';
+            if (localGallery.length === 0) {
+                galleryGrid.innerHTML = `<div style="grid-column: span 3; text-align: center; color: #777; margin-top: 50px;">ยังไม่มีรูปภาพในคลัง</div>`;
+                return;
+            }
+            localGallery.forEach((imgUrl, index) => {
+                const item = document.createElement('div');
+                item.className = 'gallery-item';
+                item.innerHTML = `<img src="${imgUrl}">`;
+                item.addEventListener('click', () => {
+                    activePhotoIndex = index;
+                    lightboxImg.src = imgUrl;
+                    lightbox.classList.add('show');
+                });
+                galleryGrid.appendChild(item);
+            });
+        }
+
+        // จัดการหน้าต่างดูรูปเดี่ยว
+        lightboxClose.addEventListener('click', () => lightbox.classList.remove('show'));
+
+        lightboxDownload.addEventListener('click', () => {
+            if (activePhotoIndex !== null) {
+                const link = document.createElement('a');
+                link.href = localGallery[activePhotoIndex];
+                link.download = `photo_${Date.now()}.jpg`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        });
+
+        lightboxDelete.addEventListener('click', () => {
+            if (activePhotoIndex !== null && confirm('คุณต้องการลบรูปภาพนี้ออกจากคลังใช่หรือไม่?')) {
+                localGallery.splice(activePhotoIndex, 1);
+                localStorage.setItem('my_camera_gallery', JSON.stringify(localGallery));
+                updateGalleryThumbnail();
+                renderGalleryGrid();
+                lightbox.classList.remove('show');
+            }
+        });
 
         function toggleVideoRecording() {
             if (!isRecording) {
@@ -656,12 +851,21 @@
                     if (event.data.size > 0) recordedChunks.push(event.data);
                 };
 
-                mediaRecorder.onstop = () => {
+                mediaRecorder.onstop = async () => {
                     const blob = new Blob(recordedChunks, {type: 'video/webm'});
+                    const file = new File([blob], `video_${Date.now()}.webm`, {type: 'video/webm'});
                     const videoURL = URL.createObjectURL(blob);
+
+                    if (navigator.canShare && navigator.canShare({files: [file]})) {
+                        try {
+                            await navigator.share({files: [file], title: 'วิดีโอจากกล้อง'});
+                            return;
+                        } catch (err) { }
+                    }
+
                     const link = document.createElement('a');
                     link.href = videoURL;
-                    link.download = `${currentMode === 'slowmo' ? 'slowmo' : 'video'}_${Date.now()}.webm`;
+                    link.download = `video_${Date.now()}.webm`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
